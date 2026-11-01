@@ -1,0 +1,33 @@
+name: Deploy web app
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack site
+        run: mkdir site && tar -xzf web.tar.gz -C site && sed -i "s/__VERSION__/${{ github.run_number }}/" site/sw.js
+      - name: Icons
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin
+          rsvg-convert -w 192 -h 192 site/icon.svg -o site/icon-192.png
+          rsvg-convert -w 512 -h 512 site/icon.svg -o site/icon-512.png
+          rsvg-convert -w 512 -h 512 site/icon-square.svg -o site/icon-maskable-512.png
+          rsvg-convert -w 180 -h 180 site/icon-square.svg -o site/apple-touch-icon.png
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
